@@ -159,7 +159,7 @@ server <- function(input,output){
     
     if(input$pie_graph_subset=="By geographic location") {
       title_plot<-paste('Read counts per species:',row_selected$new_code,sep=' ')
-       data<-row_selected %>% select(-location_id,-new_code,-lat,-long,-Description,-Depthm)
+       data<-row_selected %>% select(-location_id,-new_code,-lat,-long,-Description,-Depthm,-id)
      # print (data)
      data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0)%>% mutate(text_pos=ifelse(V1/sum(as.numeric(V1)) > 0.01, 'auto','none'))
    # print(data)
