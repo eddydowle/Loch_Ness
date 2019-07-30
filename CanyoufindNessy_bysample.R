@@ -47,6 +47,15 @@ nesiredIcon <- makeIcon(
   iconAnchorX = 0, iconAnchorY = 0
 )
 
+col_var<-c("#b7c7e3", "#77e156", "#cf50d5", "#4aa630", "#9665ee", "#e0d63f", "#5c7af1", "#abd64f", "#cc70e3", "#6fe084", "#e150b9", "#5fe1ab", "#e5562e", "#6ae2d3", "#e35677", "#63a04d", "#a27bdc", "#a59a2e", "#7189de", "#df9734", "#5697d7", "#d4ce78", "#c274bd", "#c0e3a0", "#e26a5c", "#6dcde5", "#c4804d", "#4c99ba", "#e3be97", "#978dc2", "#5ea378", "#e0ace3", "#909056", "#88859d", "#c4dac4", "#bb8175", "#4f9f99", "#c1919e", "#809286")
+?randomColor
+head(OTUtable.sum.t.descrip)
+
+species_list<-OTUtable.sum.t.descrip %>% select(-location_id,-new_code,-lat,-long,-Description,-Depthm) %>% colnames()
+
+col_species<-as.data.frame(cbind(species_list,col_var)) %>% mutate(Species =str_replace_all(species_list, "\\.", " ")) %>% select(-species_list)
+
+
 #calculateTextpositions<-function(values){
   # Do not display percentages < 5%
 #  if (values/total_count < 0.01) {
@@ -114,12 +123,14 @@ server <- function(input,output){
       data<-summary_line %>% filter(., grepl("Summary", new_code, fixed = TRUE)) %>% select(-location_id,-new_code,-lat,-long,-Description,-Depthm)
     #  data
       data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0) %>% mutate(text_pos=ifelse(V1/sum(as.numeric(V1)) > 0.01, 'auto','none'))
+      data<-left_join(data,col_species,by='Species')
+      
    #   print(data)
     #  data 
     #  total_count<-sum(as.numeric(data$V1)) #data$V1 %>% map(calculateTextpositions(.,total_count))
       #data$V1 %>% lapply(.if (./total_count < 0.01) {return ('none')}else if  (./total_count > 0.01){return('auto')})
     }
-      p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.)) %>%
+      p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.),marker=list(colors= ~col_var)) %>%
         layout(title = 'Read counts per species (all sites)',
                xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
@@ -137,7 +148,8 @@ server <- function(input,output){
       data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0)%>% mutate(text_pos=ifelse(V1/sum(as.numeric(V1)) > 0.01, 'auto','none'))
     #  print(data)
     #  total_count<-sum(as.numeric(data$V1))
-      p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.)) %>%
+      data<-left_join(data,col_species,by='Species')
+      p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.),marker=list(colors= ~col_var)) %>%
         layout(title = 'Read counts per species (all sites)',
                xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
@@ -152,7 +164,8 @@ server <- function(input,output){
      data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0)%>% mutate(text_pos=ifelse(V1/sum(as.numeric(V1)) > 0.01, 'auto','none'))
    # print(data)
   #  total_count<-sum(as.numeric(data$V1))
-    p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.)) %>%
+     data<-left_join(data,col_species,by='Species')
+    p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.),marker=list(colors= ~col_var)) %>%
       layout(title = title_plot,
              xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
              yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
