@@ -47,17 +47,26 @@ nesiredIcon <- makeIcon(
   iconAnchorX = 0, iconAnchorY = 0
 )
 
-calculateTextpositions<-function(values){
+#calculateTextpositions<-function(values){
   # Do not display percentages < 5%
-  if (values/total_count < 0.01) {
-    return ('none')
-  }
-  else if  (values/total_count > 0.01){
-    return('auto')
-  }
-}
+#  if (values/total_count < 0.01) {
+#    return ('none')
+#  }
+#  else if  (values/total_count > 0.01){
+#    return('auto')
+#  }
+#}
 
 
+#calculateTextpositions<-function(values,t_count){
+  # Do not display percentages < 1%
+#  if (values/t_count < 0.01) {
+#    return ('none')
+#  }
+#  else if  (values/t_count > 0.01){
+#    return('auto')
+#  }
+#}
 
 #subset_choice='Lake center'
 #latlongs_flat_choice<-latlongs_flat %>% mutate(icon_choice= ifelse(descrip==subset_choice, 'red','grey')) %>% mutate(depth_merge=ifelse(icon_choice=='red',paste('<b>',depth_merge,'</b>',sep=''),depth_merge))
@@ -99,19 +108,24 @@ server <- function(input,output){
 #  })
   
   # histogram
+  total_count <- reactiveVal(0)
   output$hist01 <- renderPlotly({
     if(input$pie_graph_subset=="All samples") {
       data<-summary_line %>% filter(., grepl("Summary", new_code, fixed = TRUE)) %>% select(-location_id,-new_code,-lat,-long,-Description,-Depthm)
-      data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0)
+    #  data
+      data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0) %>% mutate(text_pos=ifelse(V1/sum(as.numeric(V1)) > 0.01, 'auto','none'))
    #   print(data)
-      total_count<-sum(as.numeric(data$V1))
-      p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~V1 %>% map(calculateTextpositions) %>% unlist(.)) %>%
+    #  data 
+    #  total_count<-sum(as.numeric(data$V1)) #data$V1 %>% map(calculateTextpositions(.,total_count))
+      #data$V1 %>% lapply(.if (./total_count < 0.01) {return ('none')}else if  (./total_count > 0.01){return('auto')})
+    }
+      p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.)) %>%
         layout(title = 'Read counts per species (all sites)',
                xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
       
       p
-    }
+    
     })
   
   observeEvent(input$table01_rows_selected, {
@@ -120,10 +134,10 @@ server <- function(input,output){
   output$hist01 <- renderPlotly({
     if(input$pie_graph_subset=="All samples") {
       data<-summary_line %>% filter(., grepl("Summary", new_code, fixed = TRUE)) %>% select(-location_id,-new_code,-lat,-long,-Description,-Depthm)
-      data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0)
+      data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0)%>% mutate(text_pos=ifelse(V1/sum(as.numeric(V1)) > 0.01, 'auto','none'))
     #  print(data)
-      total_count<-sum(as.numeric(data$V1))
-      p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~V1 %>% map(calculateTextpositions) %>% unlist(.)) %>%
+    #  total_count<-sum(as.numeric(data$V1))
+      p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.)) %>%
         layout(title = 'Read counts per species (all sites)',
                xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
@@ -135,10 +149,10 @@ server <- function(input,output){
       title_plot<-paste('Read counts per species:',row_selected$new_code,sep=' ')
        data<-row_selected %>% select(-location_id,-new_code,-lat,-long,-Description,-Depthm)
      # print (data)
-     data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0)
+     data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0)%>% mutate(text_pos=ifelse(V1/sum(as.numeric(V1)) > 0.01, 'auto','none'))
    # print(data)
-    total_count<-sum(as.numeric(data$V1))
-    p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~V1 %>% map(calculateTextpositions) %>% unlist(.)) %>%
+  #  total_count<-sum(as.numeric(data$V1))
+    p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.)) %>%
       layout(title = title_plot,
              xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
              yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))

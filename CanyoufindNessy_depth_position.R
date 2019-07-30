@@ -50,15 +50,15 @@ nesiredIcon <- makeIcon(
   iconAnchorX = 0, iconAnchorY = 0
 )
 
-calculateTextpositions<-function(values){
+#calculateTextpositions<-function(values){
   # Do not display percentages < 5%
-  if (values/total_count < 0.01) {
-    return ('none')
-  }
-  else if  (values/total_count > 0.01){
-    return('auto')
-  }
-}
+#  if (values/total_count < 0.01) {
+#    return ('none')
+#  }
+#  else if  (values/total_count > 0.01){
+#    return('auto')
+#  }
+#}
 
 
 
@@ -136,9 +136,9 @@ table_subset<- reactive({
    if(nrow(table_subset()) == 0)
      return(NULL)
   data<-table_subset() %>% dplyr::select(-location_id,-new_code,-lat,-long,-Description,-Depthm,-id)  %>% summarise_all(funs(if(is.numeric(.)) sum(., na.rm = TRUE)))
-  data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0)
-  total_count<-sum(as.numeric(data$V1))
-  p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~V1 %>% map(calculateTextpositions) %>% unlist(.)) %>%
+  data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0) %>% mutate(text_pos=ifelse(V1/sum(as.numeric(V1)) > 0.01, 'auto','none'))
+#  total_count<-sum(as.numeric(data$V1))
+  p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.)) %>%
      layout(title = "Read counts per species",
             xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
             yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
