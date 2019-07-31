@@ -56,33 +56,8 @@ species_list<-OTUtable.sum.t.descrip %>% select(-location_id,-new_code,-lat,-lon
 col_species<-as.data.frame(cbind(species_list,col_var)) %>% mutate(Species =str_replace_all(species_list, "\\.", " ")) %>% select(-species_list)
 
 
-#calculateTextpositions<-function(values){
-  # Do not display percentages < 5%
-#  if (values/total_count < 0.01) {
-#    return ('none')
-#  }
-#  else if  (values/total_count > 0.01){
-#    return('auto')
-#  }
-#}
 
 
-#calculateTextpositions<-function(values,t_count){
-  # Do not display percentages < 1%
-#  if (values/t_count < 0.01) {
-#    return ('none')
-#  }
-#  else if  (values/t_count > 0.01){
-#    return('auto')
-#  }
-#}
-
-#subset_choice='Lake center'
-#latlongs_flat_choice<-latlongs_flat %>% mutate(icon_choice= ifelse(descrip==subset_choice, 'red','grey')) %>% mutate(depth_merge=ifelse(icon_choice=='red',paste('<b>',depth_merge,'</b>',sep=''),depth_merge))
-
-#qDat <- quakes
-#qDat$id <- seq.int(nrow(qDat))
-#str(qDat)
 ##############################################################################
 # UI Side
 ##############################################################################
@@ -110,31 +85,25 @@ ui <- fluidPage(
 # Server Side
 ##############################################################################
 server <- function(input,output){
- # qSub <-  reactive({
-    
-  #  subset <- subset(qDat, qDat$mag>=input$sld01_Mag[1] &
-   #                    qDat$mag<=input$sld01_Mag[2]) %>% head(25)
-#  })
+
   
-  # histogram
-  total_count <- reactiveVal(0)
+    total_count <- reactiveVal(0)
   output$hist01 <- renderPlotly({
     if(input$pie_graph_subset=="All samples") {
       data<-summary_line %>% filter(., grepl("Summary", new_code, fixed = TRUE)) %>% select(-location_id,-new_code,-lat,-long,-Description,-Depthm)
-    #  data
       data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0) %>% mutate(text_pos=ifelse(V1/sum(as.numeric(V1)) > 0.01, 'auto','none'))
       data<-left_join(data,col_species,by='Species')
       
-   #   print(data)
-    #  data 
-    #  total_count<-sum(as.numeric(data$V1)) #data$V1 %>% map(calculateTextpositions(.,total_count))
-      #data$V1 %>% lapply(.if (./total_count < 0.01) {return ('none')}else if  (./total_count > 0.01){return('auto')})
-    }
+
       p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.),marker=list(colors= ~col_var)) %>%
         layout(title = 'Read counts per species (all sites)',
                xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-      
+  }
+      if (input$pie_graph_subset=="By geographic location") {
+        return(NULL)
+        
+      }
       p
     
     })
@@ -146,8 +115,6 @@ server <- function(input,output){
     if(input$pie_graph_subset=="All samples") {
       data<-summary_line %>% filter(., grepl("Summary", new_code, fixed = TRUE)) %>% select(-location_id,-new_code,-lat,-long,-Description,-Depthm)
       data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0)%>% mutate(text_pos=ifelse(V1/sum(as.numeric(V1)) > 0.01, 'auto','none'))
-    #  print(data)
-    #  total_count<-sum(as.numeric(data$V1))
       data<-left_join(data,col_species,by='Species')
       p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.),marker=list(colors= ~col_var)) %>%
         layout(title = 'Read counts per species (all sites)',
@@ -159,18 +126,20 @@ server <- function(input,output){
     
     if(input$pie_graph_subset=="By geographic location") {
       title_plot<-paste('Read counts per species:',row_selected$new_code,sep=' ')
-       data<-row_selected %>% select(-location_id,-new_code,-lat,-long,-Description,-Depthm,-id)
+      if (nrow(row_selected)==0){
+        return(NULL)
+      }
+      else{
+        data<-row_selected %>% select(-location_id,-new_code,-lat,-long,-Description,-Depthm,-id)
      # print (data)
-     data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0)%>% mutate(text_pos=ifelse(V1/sum(as.numeric(V1)) > 0.01, 'auto','none'))
-   # print(data)
-  #  total_count<-sum(as.numeric(data$V1))
+          data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0)%>% mutate(text_pos=ifelse(V1/sum(as.numeric(V1)) > 0.01, 'auto','none'))
      data<-left_join(data,col_species,by='Species')
     p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.),marker=list(colors= ~col_var)) %>%
       layout(title = title_plot,
              xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
              yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
     
-    
+     }
     }
     p
   })
@@ -191,13 +160,7 @@ server <- function(input,output){
   observeEvent(input$table01_rows_selected, {
     row_selected = display_table[input$table01_rows_selected,]
     proxy <- leafletProxy('map01')
-#    print(row_selected)
     proxy %>%
-      #addAwesomeMarkers(popup=as.character(row_selected$new_code),
-      #                  layerId = as.character(row_selected$id),
-     #                   lng=as.numeric(row_selected$long), 
-    #                    lat=as.numeric(row_selected$lat),
-    #                    icon = nesiredIcon)
     addMarkers(popup=paste("Code:",row_selected$new_code, "<br>","Samples:",row_selected$Depthm,"<br>","Description:", row_selected$Description),
                       layerId = as.character(row_selected$id),
                       lng=as.numeric(row_selected$long), 
@@ -219,13 +182,9 @@ server <- function(input,output){
   
   # map
   output$map01 <- renderLeaflet({
-  #  pal <- colorNumeric("YlOrRd", domain=c(min(quakes$mag), max(quakes$mag)))
     qMap <- leaflet(data = display_table) %>% 
       addTiles() %>%
-      addMarkers(popup=~as.character(new_code), layerId = as.character(display_table$id),icon = nessysIcons$grey)#%>%
-   #   addLegend("bottomright", colors='blue',  values = ~new_code,
-    #            title = "Earthquake Magnitude",
-    #            opacity = 1)
+      addMarkers(popup=~as.character(new_code), layerId = as.character(display_table$id),icon = nessysIcons$grey,lng=display_table$long,lat=display_table$lat)#%>%
     qMap
   })
   
