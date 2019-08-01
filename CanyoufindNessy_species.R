@@ -149,8 +149,9 @@ server <- function(input,output){
     data<- data[-1, ]
     data<-data %>%mutate_at(vars(-new_code), as.numeric)  %>%  group_by(new_code) %>%  summarise_each(funs(sum)) 
     data<-data[rowSums(data[,-1])> 0,]
+    data<-data %>% mutate(id=as.numeric(str_replace_all(new_code, "Ness ", "")))%>%  arrange(.,id) %>% select(-id)
     colNames <- names(data)[-1] 
-  #  print(colNames)
+    print(data)
     if (nrow(data)==0){
       return(NULL)
     }
@@ -163,7 +164,7 @@ server <- function(input,output){
   }
     p <-p %>% layout(title = "",
            xaxis = list(title = "Read counts"),
-           yaxis = list(title = ""))
+           yaxis = list(title = "",categoryarray = ~new_code, categoryorder = "array"))
     }
 }
     p
@@ -190,6 +191,7 @@ server <- function(input,output){
       data<- data[-1, ]
       data<-data %>%mutate_at(vars(-new_code), as.numeric)  %>%  group_by(new_code) %>%  summarise_each(funs(sum)) 
       data<-data[rowSums(data[,-1])> 0,]
+   #   print(data)
       sam_subset<-data$new_code
       map_table<-display_table %>% mutate(icon_choice=ifelse( new_code %in% sam_subset ,'red','grey')) %>% mutate(depth_merge= str_replace(Depthm, dep, paste('<b>',dep,'</b>',sep='')))
       qMap<- leaflet(map_table) %>% addTiles() %>% 
