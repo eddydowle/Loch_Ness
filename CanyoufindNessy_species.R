@@ -16,7 +16,7 @@ library(tidyverse)
 library(splitstackshape)
 library(htmltools)
 library(shinyWidgets)
-
+library(shinydashboard)
 ##############################################################################
 # Data
 ##############################################################################
@@ -71,6 +71,7 @@ ui <- fluidPage(
   
   # side panel
   sidebarPanel(
+    tags$style(".well {background-color:  #ebf5fb;}"),
     h3('Species Present'),
     
     pickerInput(
@@ -96,6 +97,7 @@ ui <- fluidPage(
   
   # main panel
   mainPanel(
+    tags$style(type = "text/css", "#map01 {height: calc(100vh - 90px) !important;}"),
     leafletOutput('map01')
     
   )
