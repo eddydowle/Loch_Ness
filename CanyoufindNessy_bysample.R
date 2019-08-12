@@ -67,7 +67,7 @@ ui <- fluidPage(
   # side panel
   sidebarPanel(
     h3('Species Present'),
-    
+    tags$style(".well {background-color:  #ebf5fb;}"),
     radioButtons('pie_graph_subset', label="Pie graph display",
                  choices=c('All samples','By geographic location'),selected='All samples'),
     
@@ -147,8 +147,8 @@ server <- function(input,output){
   
   # table
   output$table01 <- renderDataTable({
-    
-    DT::datatable(display_table, selection = "single",options=list(stateSave = TRUE))
+    out_tab<-display_table %>% select(-lat,-long,-location_id)
+    DT::datatable(out_tab, selection = "single",options=list(stateSave = TRUE))
   })
   
   # to keep track of previously selected row
