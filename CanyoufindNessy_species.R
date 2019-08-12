@@ -63,11 +63,77 @@ species_list<-OTUtable.sum.t.descrip %>% select(-location_id,-new_code,-lat,-lon
 col_species<-as.data.frame(cbind(species_list,col_var),stringsAsFactors = F) %>% mutate(Species =str_replace_all(species_list, "\\.", " ")) %>% select(-species_list)
 
 
+#cutting down for neils film crew
+#species to be cut down too
+#eels
+#sticklebacks
+#pike
+#atlantic salmon
+#loach
+#human
+#wolf
+#cattle
+#sheep
+#deer
+#wild boar
+#oyster catchers
+#common sandpiper
+#ducks
+#chicken
+#toads
+
+
+OTUtable.sum.t.descrip<-read.table('OTU_counts_merged_species.forapp_cutdown.txt',header=T,row.names=NULL,sep='\t',stringsAsFactors = F)
+OTUtable.sum.t.descrip.sum<-OTUtable.sum.t.descrip %>% group_by(new_code)%>% mutate(lat=as.factor(lat),long=as.factor(long)) %>% dplyr::summarise_all(funs(if(is.numeric(.)) sum(., na.rm = TRUE) else paste(unique(.), collapse=", ")))
+
+
+summary_line<-OTUtable.sum.t.descrip.sum %>%  mutate(lat=as.factor(lat),long=as.factor(long)) %>% summarise_all(funs(if(is.numeric(.)) sum(., na.rm = TRUE) else paste(unique(.), collapse=", "))) %>% mutate(new_code = "Summary Ness", location_id="All locations",lat='All lats', long='All longs',Description='All areas',Depthm='All depths') #%>% summary_line
+display_table<-OTUtable.sum.t.descrip.sum %>%   mutate(lat=as.numeric(lat),long=as.numeric(long)) %>% mutate(id=as.numeric(str_replace_all(new_code, "Ness ", "")))%>%  arrange(.,id)  #rbind(.,summary_line) %>%
+display_table
+
+#this is because the two sheets dont line up so there is missing ness 14 etc codes
+display_table$id <- seq.int(nrow(display_table))
+
+class(display_table$lat)
+
+OTUtable.sum.t.descrip_depthreg<-OTUtable.sum.t.descrip%>%   mutate(lat=as.numeric(lat),long=as.numeric(long)) %>% mutate(id=as.numeric(str_replace_all(new_code, "Ness ", "")))%>%  arrange(.,id)
+OTUtable.sum.t.descrip_depthreg$id <- seq.int(nrow(OTUtable.sum.t.descrip_depthreg))
+
+latlongs<-read.table('gsp_coordinates_newcodes.txt',header=T,row.names=NULL,sep='\t',stringsAsFactors = F)
+#head(latlongs)
+latlongs_flat<-latlongs %>%  group_by(.,new_code) %>% dplyr::summarize(location_id_merge = paste(unique(location_id), collapse = ","),depth_merge = paste(unique(Depthm), collapse = ","),lat = paste(unique(lat), collapse = ","),long = paste(unique(long), collapse = ","),descrip = paste(unique(Description), collapse = ","))
+setDT(latlongs_flat)
+nessysIcons <- iconList(
+  red = makeIcon("icons/nessy_red.png", iconWidth = 38, iconHeight = 38,iconAnchorX = 0, iconAnchorY = 0),
+  grey = makeIcon("icons/nessy_grey.png", iconWidth = 38, iconHeight = 38,iconAnchorX = 0, iconAnchorY = 0)
+)
+
+nesiredIcon <- makeIcon(
+  iconUrl = "icons/nessy_red.png",
+  iconWidth = 38, iconHeight = 38,
+  iconAnchorX = 0, iconAnchorY = 0
+)
+
+
+col_var<-randomColor(count = 39, hue = "random", luminosity = "bright")
+col_var<-c("#b7c7e3", "#77e156", "#cf50d5", "#4aa630", "#9665ee", "#e0d63f", "#5c7af1", "#abd64f", "#cc70e3", "#6fe084", "#e150b9", "#5fe1ab", "#e5562e", "#6ae2d3")
+?randomColor
+head(OTUtable.sum.t.descrip)
+
+species_list<-OTUtable.sum.t.descrip %>% select(-location_id,-new_code,-lat,-long,-Description,-Depthm) %>% colnames()
+
+col_species<-as.data.frame(cbind(species_list,col_var),stringsAsFactors = F) %>% mutate(Species =str_replace_all(species_list, "\\.", " ")) %>% select(-species_list)
+
 ##############################################################################
 # UI Side
-##############################################################################
+################################0##############################################
 ui <- fluidPage(
   titlePanel("Can you find Nessie?"),
+  
+  tags$head(tags$style(
+    type="text/css",
+    "#image_sp img {max-width: 100%; width: 100%; height: auto}"
+  )),
   
   # side panel
   sidebarPanel(
@@ -77,13 +143,13 @@ ui <- fluidPage(
     pickerInput(
       inputId = "myPicker", 
       label = "Select species", 
-      choices = col_species$Species, 
+      choices = c("All species",col_species$Species), 
       options = list(
         `actions-box` = TRUE, 
         size = 10,
-        `selected-text-format` = "count > 3"
+        selected = NULL
       ), 
-      multiple = TRUE
+      multiple = FALSE
     ),
     
     selectInput("Region_select", label = h3("Select region"), 
@@ -92,6 +158,7 @@ ui <- fluidPage(
     selectInput("Depth_select", label = h3("Select depth (m)"), 
                 choices = c("All depths", "0.5m",  "20m", "100m","150m","200m"), 
                 selected = "All depths"),
+    imageOutput('image_sp'),
     plotlyOutput('hist01')
   ),
   
@@ -130,14 +197,14 @@ server <- function(input,output){
   output$hist01 <- renderPlotly({
     if(nrow(table_subset()) == 0)
       return(NULL)
-    if(is.null(input$myPicker)){
+    if(input$myPicker=='All species'){
     data<-table_subset() %>% dplyr::select(-location_id,-new_code,-lat,-long,-Description,-Depthm,-id)  %>% summarise_all(funs(if(is.numeric(.)) sum(., na.rm = TRUE)))
     data<-as.data.frame(t(data)) %>%  tibble::rownames_to_column(., "Species") %>% mutate(Species =str_replace_all(Species, "\\.", " ")) %>% filter(V1 >0) %>% mutate(text_pos=ifelse(V1/sum(as.numeric(V1)) > 0.01, 'auto','none'))
     data<-left_join(data,col_species,by='Species')
     p <- plot_ly(data, labels = ~Species, values = ~V1, type = 'pie',textposition=~text_pos %>% unlist(.),marker=list(colors= ~col_var)) %>%
       layout(title = "Read counts per species",
              xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-             yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+             yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),showlegend = TRUE)
     }
     else{
     chosenSpec<-input$myPicker
@@ -153,7 +220,7 @@ server <- function(input,output){
     data<-data[rowSums(data[,-1])> 0,]
     data<-data %>% mutate(id=as.numeric(str_replace_all(new_code, "Ness ", "")))%>%  arrange(.,id) %>% select(-id)
     colNames <- names(data)[-1] 
-    print(data)
+#    print(data)
     if (nrow(data)==0){
       return(NULL)
     }
@@ -172,8 +239,21 @@ server <- function(input,output){
     p
   })
   
+  output$image_sp <- renderImage({
+    
+      if (input$myPicker=='All species'){
+        list(src ="pictures/LochNess.jpg",style="display: block; margin-left: auto; margin-right: auto;")
+  }    
+    else{
+     chosenSpec<-input$myPicker
+     species <-paste(chosenSpec,".jpg",sep='')
+     list(src = paste("pictures/", species,sep=''),style="display: block; margin-left: auto; margin-right: auto;")
+    }
+
+  }, deleteFile = FALSE)
+  
   output$map01 <- renderLeaflet({
-    if(is.null(input$myPicker)){
+    if(input$myPicker=='All species'){
           dep<-input$Depth_select
     sam_subset<-table_subset()$new_code
     map_table<-display_table %>% mutate(icon_choice=ifelse( new_code %in% sam_subset ,'red','grey')) %>% mutate(depth_merge= str_replace(Depthm, dep, paste('<b>',dep,'</b>',sep='')))
