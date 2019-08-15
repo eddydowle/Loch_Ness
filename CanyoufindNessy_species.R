@@ -20,7 +20,7 @@ library(shinydashboard)
 ##############################################################################
 # Data
 ##############################################################################
-
+setwd('~/Documents/CoAuthorMS/loch_ness/')
 OTUtable.sum.t.descrip<-read.table('OTU_counts_merged_species.forapp.txt',header=T,row.names=NULL,sep='\t',stringsAsFactors = F)
 OTUtable.sum.t.descrip.sum<-OTUtable.sum.t.descrip %>% group_by(new_code)%>% mutate(lat=as.factor(lat),long=as.factor(long)) %>% dplyr::summarise_all(funs(if(is.numeric(.)) sum(., na.rm = TRUE) else paste(unique(.), collapse=", ")))
 
@@ -158,7 +158,8 @@ ui <- fluidPage(
     selectInput("Depth_select", label = h3("Select depth (m)"), 
                 choices = c("All depths", "0.5m",  "20m", "100m","150m","200m"), 
                 selected = "All depths"),
-    imageOutput('image_sp'),
+ #   imageOutput('image_sp'),
+ uiOutput(outputId = "image_sp_ui"),
     plotlyOutput('hist01')
   ),
   
@@ -174,6 +175,23 @@ ui <- fluidPage(
 # Server Side
 ##############################################################################
 server <- function(input,output){
+  
+  output$image_sp_ui <- renderUI({
+    if (input$myPicker=="All species"){
+      return(NULL)
+    }
+    else{
+      output$image_sp <- renderImage({
+         chosenSpec<-input$myPicker
+          species <-paste(chosenSpec,".jpg",sep='')
+          list(src = paste("pictures/", species,sep=''),style="display: block; margin-left: auto; margin-right: auto;")
+        
+      }, deleteFile = FALSE)
+      imageOutput('image_sp')
+    }
+
+    # print(x)
+    })
   
 
   table_subset<- reactive({
@@ -239,18 +257,18 @@ server <- function(input,output){
     p
   })
   
-  output$image_sp <- renderImage({
+  #output$image_sp <- renderImage({
     
-      if (input$myPicker=='All species'){
-        list(src ="pictures/LochNess.jpg",style="display: block; margin-left: auto; margin-right: auto;")
-  }    
-    else{
-     chosenSpec<-input$myPicker
-     species <-paste(chosenSpec,".jpg",sep='')
-     list(src = paste("pictures/", species,sep=''),style="display: block; margin-left: auto; margin-right: auto;")
-    }
+  #    if (input$myPicker=='All species'){
+   #     list(src ="pictures/LochNess.jpg",style="display: block; margin-left: auto; margin-right: auto;")
+  #}    
+  #  else{
+  #   chosenSpec<-input$myPicker
+  #   species <-paste(chosenSpec,".jpg",sep='')
+  #   list(src = paste("pictures/", species,sep=''),style="display: block; margin-left: auto; margin-right: auto;")
+ #   }
 
-  }, deleteFile = FALSE)
+#  }, deleteFile = FALSE)
   
   output$map01 <- renderLeaflet({
     if(input$myPicker=='All species'){
